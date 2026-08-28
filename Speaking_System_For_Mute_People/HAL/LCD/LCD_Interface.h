@@ -1,0 +1,67 @@
+/*
+ * LCD_Interface.h
+ *
+ *  Created on: Aug 26, 2026
+ *      Author: DELL
+ */
+
+#ifndef HAL_LCD_LCD_INTERFACE_H_
+#define HAL_LCD_LCD_INTERFACE_H_
+/*
+ * macros to be used in port_id param
+ */
+#define PORT_A (u8)0
+#define PORT_B (u8)1
+#define PORT_C (u8)2
+#define PORT_D (u8)3
+
+/*
+ * macros to be used with pin_no param
+ */
+#define PIN_0 (u/*
+ * macros to be used in port_id param
+ */
+#define PORT_A (u8)0
+#define PORT_B (u8)1
+#define PORT_C (u8)2
+#define PORT_D (u8)3
+
+/*
+ * macros to be used with pin_no param
+ */
+#define PIN_0 (u8)0
+#define PIN_1 (u8)1
+#define PIN_2 (u8)2
+#define PIN_3 (u8)3
+#define PIN_4 (u8)4
+#define PIN_5 (u8)5
+#define PIN_6 (u8)6
+#define PIN_7 (u8)7
+
+void LCD_vidInit(void);
+void LCD_vidDisplayString(u8 * string);
+void LCD_vidNewLine();
+void LCD_vidDisplayStringLeftShift(u8* string);
+void LCD_vidDisplayStringRightShift(u8* string);
+void LCD_vidClearDisplay();
+void LCD_vidGoTo(u8 x,u8 y);
+void LCD_vidSetCursor(u8 x,u8 y);
+void LCD_vidWriteInteger(u8 number);)0
+#define PIN_1 (u8)1
+#define PIN_2 (u8)2
+#define PIN_3 (u8)3
+#define PIN_4 (u8)4
+#define PIN_5 (u8)5
+#define PIN_6 (u8)6
+#define PIN_7 (u8)7
+
+void LCD_vidInit(void);
+void LCD_vidDisplayString(u8 * string);
+void LCD_vidNewLine();
+void LCD_vidDisplayStringLeftShift(u8* string);
+void LCD_vidDisplayStringRightShift(u8* string);
+void LCD_vidClearDisplay();
+void LCD_vidGoTo(u8 x,u8 y);
+void LCD_vidSetCursor(u8 x,u8 y);
+void LCD_vidWriteInteger(u16 number);
+#endif /* HAL_LCD_LCD_INTERFACE_H_ */
