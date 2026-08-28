@@ -1,6 +1,3 @@
-/*
- * LCD_Interface.h
- */
 #ifndef HAL_LCD_LCD_INTERFACE_H_
 #define HAL_LCD_LCD_INTERFACE_H_
 
@@ -21,13 +18,13 @@
 #define PIN_7 ((u8)7)
 
 void LCD_vidInit(void);
-void LCD_vidDisplayString(u8* string);
+void LCD_vidDisplayString(const u8* string);
 void LCD_vidNewLine(void);
-void LCD_vidDisplayStringLeftShift(u8* string);
-void LCD_vidDisplayStringRightShift(u8* string);
+void LCD_vidDisplayStringLeftShift(const u8* string);
+void LCD_vidDisplayStringRightShift(const u8* string);
 void LCD_vidClearDisplay(void);
 void LCD_vidGoTo(u8 x, u8 y);
 void LCD_vidSetCursor(u8 x, u8 y);
 void LCD_vidWriteInteger(u16 number);
 
-#endif /* HAL_LCD_LCD_INTERFACE_H_ */
+#endif
