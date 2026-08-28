@@ -8,22 +8,17 @@ RM := rm -rf
 
 -include sources.mk
 -include MCAL/UART/subdir.mk
--include MCAL/TIMER/subdir.mk
 -include MCAL/SERVICES/SHOW/subdir.mk
 -include MCAL/SERVICES/GLOVE_HANDLER/subdir.mk
 -include MCAL/SERVICES/GET_WORD_SOUND/subdir.mk
 -include MCAL/SERVICES/CALIBRATION/subdir.mk
--include MCAL/GIE/subdir.mk
 -include MCAL/DIO/subdir.mk
 -include MCAL/ADC/subdir.mk
 -include HAL/TILT_SENSOR/subdir.mk
 -include HAL/M16P_HANDLER/subdir.mk
--include HAL/LED/subdir.mk
 -include HAL/LCD/subdir.mk
--include HAL/GESTURE/subdir.mk
 -include HAL/FLEX_SENSOR/subdir.mk
 -include APP/subdir.mk
--include subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
