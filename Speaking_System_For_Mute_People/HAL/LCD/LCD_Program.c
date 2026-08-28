@@ -36,17 +36,17 @@ void LCD_vidInit(void)
     DIO_u8SetPortMode(LCD_Data_PORT, 0xFFu);
 
     _delay_ms(40);
-    LCD_vidWriteCmd(0x38u); /* 8-bit, 2-line, 5x8 font */
+    LCD_vidWriteCmd(0x38u);
     _delay_ms(5);
-    LCD_vidWriteCmd(0x0Cu); /* Display ON, cursor OFF */
+    LCD_vidWriteCmd(0x0Cu);
     _delay_ms(1);
-    LCD_vidWriteCmd(0x01u); /* Clear */
+    LCD_vidWriteCmd(0x01u);
     _delay_ms(2);
-    LCD_vidWriteCmd(0x06u); /* Increment cursor */
+    LCD_vidWriteCmd(0x06u);
     next_char_position = 0u;
 }
 
-void LCD_vidDisplayString(u8* string)
+void LCD_vidDisplayString(const u8* string)
 {
     u8 i;
     if (string == NULL) return;
@@ -56,10 +56,10 @@ void LCD_vidDisplayString(u8* string)
         if (next_char_position == 16u)
         {
             LCD_vidWriteCmd(0xC0u);
-            next_char_position = 16u;
         }
+        if (next_char_position >= 32u) break;
         LCD_vidWriteData(string[i]);
-        if (next_char_position < 32u) next_char_position++;
+        next_char_position++;
     }
 }
 
@@ -69,7 +69,7 @@ void LCD_vidNewLine(void)
     next_char_position = 16u;
 }
 
-void LCD_vidDisplayStringLeftShift(u8* string)
+void LCD_vidDisplayStringLeftShift(const u8* string)
 {
     if (string == NULL) return;
     LCD_vidDisplayString(string);
@@ -80,7 +80,7 @@ void LCD_vidDisplayStringLeftShift(u8* string)
     }
 }
 
-void LCD_vidDisplayStringRightShift(u8* string)
+void LCD_vidDisplayStringRightShift(const u8* string)
 {
     if (string == NULL) return;
     LCD_vidDisplayString(string);
@@ -100,12 +100,13 @@ void LCD_vidClearDisplay(void)
 
 void LCD_vidGoTo(u8 x, u8 y)
 {
-    if (x == 1u && y < 16u)
+    if (y >= 16u) return;
+    if (x == 1u)
     {
         LCD_vidWriteCmd((u8)(0x80u + y));
         next_char_position = y;
     }
-    else if (x == 2u && y < 16u)
+    else if (x == 2u)
     {
         LCD_vidWriteCmd((u8)(0xC0u + y));
         next_char_position = (u8)(16u + y);
@@ -125,18 +126,18 @@ void LCD_vidWriteInteger(u16 number)
 
     if (number == 0u)
     {
-        LCD_vidWriteData('0');
+        if (next_char_position < 32u) LCD_vidWriteData('0');
         if (next_char_position < 32u) next_char_position++;
         return;
     }
 
-    while ((number / divisor) >= 10u && divisor <= 1000u) divisor *= 10u;
+    while ((number / divisor) >= 10u && divisor < 1000u) divisor *= 10u;
 
-    while (divisor > 0u)
+    while (divisor > 0u && next_char_position < 32u)
     {
         value = number / divisor;
         LCD_vidWriteData((u8)('0' + value));
-        if (next_char_position < 32u) next_char_position++;
+        next_char_position++;
         number = (u16)(number % divisor);
         if (divisor == 1u) break;
         divisor /= 10u;
