@@ -14,7 +14,6 @@
 #include "../CALIBRATION/CALIBRATION_Interface.h"
 
 #define NO_OF_FLEX_SENSORS ((u8)5)
-#define NO_OF_TILT_SENSORS ((u8)2)
 #define GLOVE_TOTAL_VALUES ((u8)7)
 #define GLOVE_AVERAGE_SAMPLES ((u8)3)
 
@@ -36,8 +35,6 @@ void GLOVE_vidSensorsInit(void)
 void GLOVE_vidSetGloveParams(u16* sensor_read, u8 no_of_sensors)
 {
     SENSOR_READ = sensor_read;
-
-    /* The public parameter is the seven recognition sensors. */
     (void)no_of_sensors;
 }
 
@@ -45,6 +42,7 @@ void GLOVE_vidGetHandRead(void)
 {
     u8 i;
     u8 sample;
+    u8 tilt_value;
     u32 sum;
     u16 read_value;
 
@@ -70,9 +68,14 @@ void GLOVE_vidGetHandRead(void)
         SENSOR_READ[i] = (u16)(sum / GLOVE_AVERAGE_SAMPLES);
     }
 
-    /* The two tilt sensors are digital. */
-    TILT_vidGetTiltRead((u8*)&SENSOR_READ[5], TILT_2);
-    TILT_vidGetTiltRead((u8*)&SENSOR_READ[6], TILT_3);
+    /* The two tilt sensors are digital, so store them as full u16 values. */
+    tilt_value = 0u;
+    TILT_vidGetTiltRead(&tilt_value, TILT_2);
+    SENSOR_READ[5] = (u16)tilt_value;
+
+    tilt_value = 0u;
+    TILT_vidGetTiltRead(&tilt_value, TILT_3);
+    SENSOR_READ[6] = (u16)tilt_value;
 
     /* Apply stored flex-sensor calibration after the raw frame is complete. */
     CAL_vidApply(SENSOR_READ);
