@@ -35,6 +35,21 @@ static void M16P_vidSend(u8 command, u16 parameter)
     for (i = 0u; i < SERIAL_BUFF_SIZE; i++) UART_Transmit(send_buf[i]);
 }
 
+static void M16P_vidSendFolderFile(u8 folder, u8 file)
+{
+    u16 checksum;
+    u8 i;
+
+    send_buf[3] = 0x0Fu;
+    send_buf[4] = is_reply;
+    send_buf[5] = folder;
+    send_buf[6] = file;
+    checksum = M16P_u16Checksum(send_buf);
+    M16P_vidFillU16(&send_buf[7], checksum);
+
+    for (i = 0u; i < SERIAL_BUFF_SIZE; i++) UART_Transmit(send_buf[i]);
+}
+
 void M16P_vidInit(u16 baud)
 {
     is_reply = 0u;
@@ -62,14 +77,10 @@ void M16P_vidSleep(void) { M16P_vidSend(0x0Au, 0u); }
 void M16P_vidReset(void) { M16P_vidSend(0x0Cu, 0u); }
 void M16P_vidPlayback(void) { M16P_vidSend(0x0Du, 0u); }
 void M16P_vidPause(void) { M16P_vidSend(0x0Eu, 0u); }
-
 void M16P_vidPlayFileInFolder(u16 folder, u16 file)
 {
-    /* DFPlayer command 0x0F uses folder in high byte and file in low byte. */
-    u16 parameter = (u16)(((folder & 0x00FFu) << 8) | (file & 0x00FFu));
-    M16P_vidSend(0x0Fu, parameter);
+    M16P_vidSendFolderFile((u8)folder, (u8)file);
 }
-
 void M16P_vidPlayByNumber(u16 num) { M16P_vidSend(0x12u, num); }
 void M16P_vidGetState(void) { M16P_vidSend(0x42u, 0u); }
 void M16P_vidGetVolume(void) { M16P_vidSend(0x43u, 0u); }
