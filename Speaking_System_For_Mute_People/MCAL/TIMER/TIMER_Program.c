@@ -1,203 +1,144 @@
-/*
- * TIMER_Program.c
- *
- *  Created on: Aug 27, 2026
- *      Author: DELL
- */
 #include "../../LIB/STD_Types.h"
 #include "../../LIB/BIT_MATH.h"
-#include"TIMER_Config.h"
-#include"TIMER_private.h"
-#include"TIMER_Interface.h"
+#include "TIMER_Config.h"
+#include "TIMER_Private.h"
+#include "TIMER_Interface.h"
 
-void (* TIMER1_voidpSetCallBackNormal)(void) = NULL;
+void (*TIMER1_voidpSetCallBackNormal)(void) = NULL;
+void (*TIMER1_voidpSetCallBackCTC)(void) = NULL;
 
-void (* TIMER1_voidpSetCallBackCTC)(void) = NULL;
+static volatile u16 compare_cnt1 = 0u;
 
-u16 compare_cnt1;
-
-void TIMER1_voidInit(void){
-
-	//Setting timer mode;
+void TIMER1_voidInit(void)
+{
 #if TIMER1_MODE == NORMAL_T_MODE
-
-	CLR_BIT(TCCR1A , WGM10);
-	CLR_BIT(TCCR1A , WGM11);
-	CLR_BIT(TCCR1B , WGM12);
-	CLR_BIT(TCCR1B , WGM13);
-
-	//Enabling timer flag;
-	SET_BIT(TIMSK , TOIE1);
-
-	//selecting prescaler;
-	TCCR1B &= 0b11111000;
-	TCCR1B |= TIMER1_PRESCALER;
+    CLR_BIT(TCCR1A, WGM10);
+    CLR_BIT(TCCR1A, WGM11);
+    CLR_BIT(TCCR1B, WGM12);
+    CLR_BIT(TCCR1B, WGM13);
+    SET_BIT(TIMSK, TOIE1);
 
 #elif TIMER1_MODE == PWM_T_MODE
-
-	SET_BIT(TCCR1A , WGM10);
-	CLR_BIT(TCCR1A , WGM11);
-	CLR_BIT(TCCR1B , WGM12);
-	CLR_BIT(TCCR1B , WGM13);
-
-	//selecting prescaler;
-	TCCR1B &= 0b11111000;
-	TCCR1B |= TIMER1_PRESCALER;
+    SET_BIT(TCCR1A, WGM10);
+    CLR_BIT(TCCR1A, WGM11);
+    CLR_BIT(TCCR1B, WGM12);
+    CLR_BIT(TCCR1B, WGM13);
 
 #elif TIMER1_MODE == CTC_T_MODE
-
-	CLR_BIT(TCCR1A , WGM10);
-	CLR_BIT(TCCR1A , WGM11);
-	SET_BIT(TCCR1B , WGM12);
-	CLR_BIT(TCCR1B , WGM13);
-
-	//Enabling timer flag;
-	SET_BIT(TIMSK , OCIE1A);
-
-	//selecting prescaler;
-	TCCR1B &= 0b11111000;
-	TCCR1B |= TIMER1_PRESCALER;
+    CLR_BIT(TCCR1A, WGM10);
+    CLR_BIT(TCCR1A, WGM11);
+    SET_BIT(TCCR1B, WGM12);
+    CLR_BIT(TCCR1B, WGM13);
+    SET_BIT(TIMSK, OCIE1A);
 
 #elif TIMER1_MODE == FAST_PWM_T_MODE
-
-	SET_BIT(TCCR1A , WGM10);
-	CLR_BIT(TCCR1A , WGM11);
-	SET_BIT(TCCR1B , WGM12);
-	CLR_BIT(TCCR1B , WGM13);
-
-	//selecting prescaler;
-	TCCR1B &= 0b11111000;
-	TCCR1B |= TIMER1_PRESCALER;
+    SET_BIT(TCCR1A, WGM10);
+    CLR_BIT(TCCR1A, WGM11);
+    SET_BIT(TCCR1B, WGM12);
+    CLR_BIT(TCCR1B, WGM13);
 
 #else
-
 #error "wrong timer mode"
-
 #endif
+
+    TIMER1_uint8SetPrescaler(TIMER1_PRESCALER);
 }
 
-void TIMER1_voidDisable(void){
-
-	TCCR1B &= 0b11111000;
-
+void TIMER1_voidDisable(void)
+{
+    TCCR1B &= (u8)0xF8u;
 }
 
-u8 TIMER1_uint8SetPrescaler(u8 Copy_uint8Prescaler){
-
-	u8 Local_uint8ErrorState = 0;
-
-	if(Copy_uint8Prescaler <8){
-
-		//selecting prescaler;
-		TCCR1B &= 0b11111000;
-		TCCR1B |= Copy_uint8Prescaler;
-
-	}
-	else{
-
-		Local_uint8ErrorState = 1;
-
-	}
-
-	return Local_uint8ErrorState;
-
-}
-void TIMER1_voidSetCounterRegister(u8 Copy_uint8Counter1Start){
-
-	TCNT1L = Copy_uint8Counter1Start;
+u8 TIMER1_uint8SetPrescaler(u8 Copy_uint8Prescaler)
+{
+    if (Copy_uint8Prescaler < 8u)
+    {
+        TCCR1B &= (u8)0xF8u;
+        TCCR1B |= Copy_uint8Prescaler;
+        return 0u;
+    }
+    return 1u;
 }
 
-void TIMER1_voidSetCTCTime(u8 Copy_uint8CompareTime){
-
-	 OCR1AL = Copy_uint8CompareTime;
-
+void TIMER1_voidSetCounterRegister(u8 Copy_uint8Counter1Start)
+{
+    TCNT1H = 0u;
+    TCNT1L = Copy_uint8Counter1Start;
 }
 
-void TIMER1_voidGetNumCountCTC(u16 Copy_uint8DesiredTime, u16 * Copy_uint16pNumOfCounts, u8 * Copy_uint8pCompareValue){
+void TIMER1_voidSetCTCTime(u8 Copy_uint8CompareTime)
+{
+    OCR1AH = 0u;
+    OCR1AL = Copy_uint8CompareTime;
+}
 
-#define PRESCALER		TIMER1_PRESCALER
+void TIMER1_voidGetNumCountCTC(u16 Copy_uint8DesiredTime,
+                               u16 *Copy_uint16pNumOfCounts,
+                               u8 *Copy_uint8pCompareValue)
+{
+    u32 ticks_per_ms;
+    u32 total_ticks;
+    u32 counts;
 
-#if PRESCALER == CLK_1024
-#define TICK_TIME		128
+    if ((Copy_uint16pNumOfCounts == NULL) || (Copy_uint8pCompareValue == NULL))
+        return;
 
-	* Copy_uint16pNumOfCounts = (u16)(((u32)Copy_uint8DesiredTime*1000)/((u32)TICK_TIME*250));
-	* Copy_uint8pCompareValue = 250;
-
-#elif PRESCALER == CLK_256
-#define TICK_TIME		32
-
-	* Copy_uint16pNumOfCounts = (uint16_)(((uint32_t)Copy_uint8DesiredTime*1000)/((uint32_t)TICK_TIME*250));
-	* Copy_uint8pCompareValue = 250;
-
-#elif PRESCALER == CLK_64
-#define TICK_TIME		8
-
-	* Copy_uint16pNumOfCounts = (uint16_)(((uint32_t)Copy_uint8DesiredTime*1000)/((uint32_t)TICK_TIME*250));
-	* Copy_uint8pCompareValue = 250;
-
-#elif PRESCALER == CLK_8
-
-	* Copy_uint16pNumOfCounts = (uint16_)(((uint32_t)Copy_uint8DesiredTime*1000)/250);
-	* Copy_uint8pCompareValue = 250;
-
-#elif PRESCALER == CLK
-#define TICK_TIME		12/100
-	* Copy_uint16pNumOfCounts = (uint16_)(((uint32_t)Copy_uint8DesiredTime*1000)/(250*TICK_TIME));
-	* Copy_uint8pCompareValue = 250;
-
+    /* F_CPU is expected to be defined by the project build settings. */
+#ifndef F_CPU
+#define F_CPU 8000000UL
 #endif
+
+    switch (TIMER1_PRESCALER)
+    {
+        case CLK:       ticks_per_ms = F_CPU / 1000UL;       break;
+        case CLK_8:     ticks_per_ms = F_CPU / 8000UL;      break;
+        case CLK_64:    ticks_per_ms = F_CPU / 64000UL;     break;
+        case CLK_256:   ticks_per_ms = F_CPU / 256000UL;    break;
+        case CLK_1024:  ticks_per_ms = F_CPU / 1024000UL;   break;
+        default:
+            *Copy_uint16pNumOfCounts = 0u;
+            *Copy_uint8pCompareValue = 0u;
+            return;
+    }
+
+    total_ticks = (u32)Copy_uint8DesiredTime * ticks_per_ms;
+    counts = (total_ticks + 249UL) / 250UL;
+
+    if (counts > 65535UL) counts = 65535UL;
+    *Copy_uint16pNumOfCounts = (u16)counts;
+    *Copy_uint8pCompareValue = 250u;
+    compare_cnt1 = (u16)counts;
 }
 
-
-void TIMER1_voidSetCallBackNormal(void (* Copy_uint8pSetCallBackNormal1)(void)){
-
-	TIMER1_voidpSetCallBackNormal = Copy_uint8pSetCallBackNormal1;
-
+void TIMER1_voidSetCallBackNormal(void (*Copy_uint8pSetCallBackNormal1)(void))
+{
+    TIMER1_voidpSetCallBackNormal = Copy_uint8pSetCallBackNormal1;
 }
 
-void TIMER1_voidSetCallBackCTC(void (* Copy_uint8pSetCallBackCTC1)(void)){
-
-	TIMER1_voidpSetCallBackCTC = Copy_uint8pSetCallBackCTC1;
-
+void TIMER1_voidSetCallBackCTC(void (*Copy_uint8pSetCallBackCTC1)(void))
+{
+    TIMER1_voidpSetCallBackCTC = Copy_uint8pSetCallBackCTC1;
 }
 
 void __vector_7(void) __attribute__((signal));
-void __vector_7(void){
+void __vector_7(void)
+{
+    static volatile u16 cnt = 0u;
 
-	static u16 cnt = 0;
-	//extern uint16_ compare_cnt;
-	cnt++;
-	if(cnt == compare_cnt1){
-
-//		TIMER_voidSetCounterRegister(123);
-		if(TIMER1_voidpSetCallBackCTC != NULL){
-
-			TIMER1_voidpSetCallBackCTC();
-			cnt = 0;
-		}
-		else{
-
-			//do nothing;
-
-		}
-
-	}
-
-
+    if (TIMER1_voidpSetCallBackCTC != NULL)
+    {
+        cnt++;
+        if ((compare_cnt1 != 0u) && (cnt >= compare_cnt1))
+        {
+            cnt = 0u;
+            TIMER1_voidpSetCallBackCTC();
+        }
+    }
 }
 
 void __vector_9(void) __attribute__((signal));
-void __vector_9(void){
-
-	if(TIMER1_voidpSetCallBackNormal != NULL){
-
-		TIMER1_voidpSetCallBackNormal();
-
-	}
-	else{
-
-		//do nothing;
-
-	}
-
+void __vector_9(void)
+{
+    if (TIMER1_voidpSetCallBackNormal != NULL)
+        TIMER1_voidpSetCallBackNormal();
 }
