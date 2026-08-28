@@ -1,84 +1,133 @@
 /*
  * GET_WORD_SOUND_Program.c
  *
- *  Created on: Aug 28, 2026
- *      Author: DELL
+ * Nearest-reference gesture classifier using seven sensor values.
+ * Uses squared Euclidean distance to avoid floating-point math on AVR.
  */
 
-#include "../../LIB/STD_Types.h"
+#include "../../../LIB/STD_Types.h"
 #include "GET_WORD_SOUND_Interface.h"
 #include "GET_WORD_SOUND_Config.h"
-#include "math.h"
 
-typedef struct{
+#define SENSOR_VALUE_COUNT ((u8)7)
 
-	u16 thumb;
-	u16 finger_1;
-	u16 finger_2;
-	u16 finger_3;
-	u16 finger_4;
+typedef struct
+{
+    u16 sensor[SENSOR_VALUE_COUNT];
+    u8 sentence;
+    u8 word;
+} GestureReference;
 
-	u16 tilt0;
-	u16 tilt1;
+static const GestureReference words[TOTAL_NO_OF_WORDS] =
+{
+    SEN_1_WORD_1,
+    SEN_1_WORD_2,
+    SEN_2_WORD_1,
+    SEN_3_WORD_1,
+    SEN_3_WORD_2,
+    SEN_3_WORD_3,
+    SEN_4_WORD_1,
+    SEN_4_WORD_2,
+    SEN_4_WORD_3,
+    SEN_4_WORD_4,
+    SEN_5_WORD_1,
+    SEN_5_WORD_2,
+    SEN_5_WORD_3,
+    SEN_5_WORD_4,
+    SEN_6_WORD_1,
+    SEN_6_WORD_2,
+    SEN_7_WORD_1,
+    SEN_7_WORD_2,
+    SEN_7_WORD_3,
+    SEN_7_WORD_4,
+    STOPPING_WORD,
+    NOT_FOUND
+};
 
-	u16 sentence;
-	u16 word;
-
-} word;
-
-word words[TOTAL_NO_OF_WORDS] = {SEN_1_WORD_1, SEN_1_WORD_2, SEN_2_WORD_1, SEN_3_WORD_1,
-									  SEN_3_WORD_2, SEN_3_WORD_3, SEN_4_WORD_1, SEN_4_WORD_2,
-									  SEN_4_WORD_3, SEN_4_WORD_4, SEN_5_WORD_1, SEN_5_WORD_2,
-									  SEN_5_WORD_3, SEN_5_WORD_4, SEN_6_WORD_1, SEN_6_WORD_2,
-									  SEN_7_WORD_1, SEN_7_WORD_2, SEN_7_WORD_3, SEN_7_WORD_4,
-									  STOPPING_WORD, NOT_FOUND};
-
-// HELPING FUNCTIONS
-
-// 1. Function to calculate Euclidean distance between two sensor readings
-f32 GET_float32CalculateDistance(u16* sensor_reads, word* word) {
-
-    f32 distance = 0.0;
-
-    distance += pow((f32)(sensor_reads[0] - word->thumb), 2);
-    distance += pow((f32)(sensor_reads[1] - word->finger_1), 2);
-    distance += pow((f32)(sensor_reads[2] - word->finger_2), 2);
-    distance += pow((f32)(sensor_reads[3] - word->finger_3), 2);
-    distance += pow((f32)(sensor_reads[4] - word->finger_4), 2);
-    distance += pow((f32)(sensor_reads[5] - word->tilt0), 2);
-    distance += pow((f32)(sensor_reads[6] - word->tilt1), 2);
-
-    return sqrt(distance);
-
+static u32 GET_u32AbsDifference(u16 a, u16 b)
+{
+    return (a >= b) ? ((u32)a - (u32)b) : ((u32)b - (u32)a);
 }
 
+static u32 GET_u32CalculateDistanceSquared(const u16* sensor_reads,
+                                           const GestureReference* reference)
+{
+    u8 i;
+    u32 difference;
+    u32 distance = 0UL;
 
-// 2. Function to find the closest predefined sensor data
-u8 GET_u8FindClosestSensor(word* words, u16* sensor_reads, u8 num_words) {
+    for (i = 0u; i < SENSOR_VALUE_COUNT; i++)
+    {
+        difference = GET_u32AbsDifference(sensor_reads[i], reference->sensor[i]);
+        distance += difference * difference;
+    }
 
-    uint8_t closest_index = 0;
+    return distance;
+}
 
-    f32 min_distance = GET_float32CalculateDistance(sensor_reads, &words[0]);
+u8 GET_u8FindClosestSensor(const u16* sensor_reads, u8 num_words,
+                           u32* best_distance)
+{
+    u8 i;
+    u8 closest_index = 0u;
+    u32 distance;
+    u32 min_distance;
 
-    for (uint8_t i = 1; i < num_words; i++) {
-        f32 distance = GET_float32CalculateDistance(sensor_reads, &words[i]);
-        if (distance < min_distance) {
+    if ((sensor_reads == NULL) || (num_words == 0u))
+    {
+        if (best_distance != NULL)
+        {
+            *best_distance = 0xFFFFFFFFUL;
+        }
+        return 0u;
+    }
+
+    min_distance = GET_u32CalculateDistanceSquared(sensor_reads, &words[0]);
+
+    for (i = 1u; i < num_words; i++)
+    {
+        distance = GET_u32CalculateDistanceSquared(sensor_reads, &words[i]);
+
+        if (distance < min_distance)
+        {
             min_distance = distance;
             closest_index = i;
         }
     }
 
+    if (best_distance != NULL)
+    {
+        *best_distance = min_distance;
+    }
+
     return closest_index;
 }
 
-
-// Main Function
-void GET_vidGetWordAndSound(u16 * sensor_reads, uint8_t * word_location )
+void GET_vidGetWordAndSound(u16* sensor_reads, u8* word_location)
 {
+    u8 index;
+    u32 distance_squared;
+    u32 threshold_squared =
+        (u32)GESTURE_DISTANCE_THRESHOLD * (u32)GESTURE_DISTANCE_THRESHOLD;
 
-uint8_t i = GET_u8FindClosestSensor(words, sensor_reads, TOTAL_NO_OF_WORDS-1);
+    if ((sensor_reads == NULL) || (word_location == NULL))
+    {
+        return;
+    }
 
-word_location[0] = words[i].sentence;
-word_location[1] = words[i].word;
+    /* Do not compare against NOT_FOUND itself. */
+    index = GET_u8FindClosestSensor(sensor_reads,
+                                    (u8)(TOTAL_NO_OF_WORDS - 1u),
+                                    &distance_squared);
 
+    if (distance_squared <= threshold_squared)
+    {
+        word_location[0] = words[index].sentence;
+        word_location[1] = words[index].word;
+    }
+    else
+    {
+        word_location[0] = 0u;
+        word_location[1] = 1u;
+    }
 }
