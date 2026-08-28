@@ -1,5 +1,5 @@
 ################################################################################
-# Source directories used by the AVR build
+# Source directories used by the working glove application
 ################################################################################
 
 OBJ_SRCS :=
@@ -20,17 +20,13 @@ C_DEPS :=
 SUBDIRS := \
 APP \
 HAL/FLEX_SENSOR \
-HAL/GESTURE \
 HAL/LCD \
-HAL/LED \
 HAL/M16P_HANDLER \
 HAL/TILT_SENSOR \
 MCAL/ADC \
 MCAL/DIO \
-MCAL/GIE \
 MCAL/SERVICES/CALIBRATION \
 MCAL/SERVICES/GET_WORD_SOUND \
 MCAL/SERVICES/GLOVE_HANDLER \
 MCAL/SERVICES/SHOW \
-MCAL/TIMER \
 MCAL/UART \
