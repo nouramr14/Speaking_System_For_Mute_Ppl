@@ -1,47 +1,112 @@
 /*
  * ADC_Program.c
  *
- *  Created on: Aug 27, 2026
- *      Author: DELL
+ * ATmega32 ADC driver.
+ * The application uses software-triggered, blocking conversions because
+ * the glove needs a complete sensor frame before gesture recognition.
  */
+
 #include <avr/io.h>
+#include <stdint.h>
 
 #include "../../LIB/STD_Types.h"
-#include "../../LIB/BIT_MATH.h"
-
 #include "ADC_Interface.h"
-#include "ADC_Private.h"
 
+static u16* ADC_pu16ReadingVariable = NULL;
+static void (*ADC_pvCallback)(void) = NULL;
 
-void ADC_Init(void)
+void ADC_vidAdcInit(u8 voltage_reference)
 {
-    /* AVCC as reference voltage */
-    ADMUX = (1 << REFS0);
+    /* Disable ADC before configuration. */
+    ADCSRA = 0;
 
-    /* Enable ADC + Prescaler 128 */
-    ADCSRA = (1 << ADEN) |
-             (1 << ADPS2) |
-             (1 << ADPS1) |
-             (1 << ADPS0);
+    /* Right-adjust result; select reference voltage. */
+    switch (voltage_reference)
+    {
+        case INTERNAL_2_56_:
+            ADMUX = (1u << REFS1) | (1u << REFS0);
+            break;
+
+        case VCC:
+            ADMUX = (1u << REFS0);
+            break;
+
+        case AREF_VOLTAGE:
+        default:
+            ADMUX = 0;
+            break;
+    }
+
+    /* Enable ADC, prescaler = 128 => 62.5 kHz ADC clock at 8 MHz CPU. */
+    ADCSRA = (1u << ADEN) |
+             (1u << ADPS2) |
+             (1u << ADPS1) |
+             (1u << ADPS0);
 }
 
-
-u16 ADC_Read(u8 channel)
+void ADC_vidAdcPinInit(u8 adc_pin)
 {
-    /* Select ADC channel */
-    ADMUX = (ADMUX & 0xE0) | (channel & 0x07);
+    if (adc_pin == ADC_ALL)
+    {
+        DDRA &= (u8)~0xFFu;
+    }
+    else if (adc_pin < 8u)
+    {
+        DDRA &= (u8)~(1u << adc_pin);
+    }
+}
 
-    /* Start conversion */
-    ADCSRA |= (1 << ADSC);
+void ADC_vidSetReadingVariable(u16* adc_read)
+{
+    ADC_pu16ReadingVariable = adc_read;
+}
 
-    /* Wait for conversion */
-    while(ADCSRA & (1 << ADSC));
+void ADC_vidSetCallBack(void (*func)(void))
+{
+    ADC_pvCallback = func;
+}
 
-    /* Read ADC result */
-    u16 result;
+void ADC_vidAdcGetRead(u8 adc_pin)
+{
+    u16 local_read;
 
-    result = ADCL;
-    result |= ((u16)ADCH << 8);
+    if (adc_pin > ADC_7 || ADC_pu16ReadingVariable == NULL)
+    {
+        return;
+    }
 
-    return result;
+    /* Keep the reference bits and replace only the channel bits. */
+    ADMUX = (ADMUX & 0xE0u) | (adc_pin & 0x07u);
+
+    ADCSRA |= (1u << ADSC);
+
+    while (ADCSRA & (1u << ADSC))
+    {
+        /* Wait for conversion. */
+    }
+
+    local_read = ADC;
+    *ADC_pu16ReadingVariable = local_read;
+
+    if (ADC_pvCallback != NULL)
+    {
+        ADC_pvCallback();
+    }
+}
+
+void ADC_vidGetAutoTriggerRead(void)
+{
+    /* Compatibility function. The project uses software triggering. */
+}
+
+void ADC_VIDSetAutoTriggerMode(u8 mode)
+{
+    if (mode == AUTO_TRIGGER)
+    {
+        ADCSRA |= (1u << ADATE);
+    }
+    else
+    {
+        ADCSRA &= (u8)~(1u << ADATE);
+    }
 }
