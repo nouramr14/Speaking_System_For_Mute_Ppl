@@ -1,32 +1,49 @@
-/*
- * UART_Program.c
- *
- *  Created on: Aug 27, 2026
- *      Author: DELL
- */
+#include <avr/io.h>
 #include "../../LIB/STD_Types.h"
-#include "../../LIB/BIT_MATH.h"
-
 #include "UART_Config.h"
 #include "UART_Private.h"
 #include "UART_Interface.h"
 
-void UART_Init(u16 baud) {
-    u16 ubrr = (u16)(((u32)8000000/16)/baud-1);
+#ifndef F_CPU
+#define F_CPU 8000000UL
+#endif
 
-    UBRRH = (u8)(ubrr>>8);
+void UART_Init(u16 baud)
+{
+    u16 ubrr;
+
+    if (baud == 0u) return;
+
+    ubrr = (u16)((F_CPU / (16UL * (u32)baud)) - 1UL);
+
+    UBRRH = (u8)(ubrr >> 8);
     UBRRL = (u8)ubrr;
-    SET_BIT(UCSRB,4);
-    SET_BIT(UCSRB,3);
-    UCSRC = (1<<7) | (3<<1);
+
+    /* 8 data bits, 1 stop bit, no parity, normal asynchronous mode. */
+    UCSRA = 0u;
+    UCSRB = (1u << RXEN) | (1u << TXEN);
+    UCSRC = (1u << URSEL) | (1u << UCSZ1) | (1u << UCSZ0);
 }
 
-void UART_Transmit(u8 data) {
-    while (!GET_BIT(UCSRA,5));
+void UART_Transmit(u8 data)
+{
+    while ((UCSRA & (1u << UDRE)) == 0u) { }
     UDR = data;
 }
 
-u8 UART_Receive(void) {
-    while (!GET_BIT(UCSRA,7));
+u8 UART_Receive(void)
+{
+    while ((UCSRA & (1u << RXC)) == 0u) { }
     return UDR;
+}
+
+void UART_TransmitString(u8* Copy_ptrString)
+{
+    u16 i = 0u;
+    if (Copy_ptrString == NULL) return;
+    while (Copy_ptrString[i] != '\0')
+    {
+        UART_Transmit(Copy_ptrString[i]);
+        i++;
+    }
 }
