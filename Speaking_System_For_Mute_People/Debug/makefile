@@ -1,77 +1,69 @@
 ################################################################################
-# AVR build file
+# Standalone AVR build file for Speaking_System_For_Mute_People
 ################################################################################
 
--include ../makefile.init
-
+MCU := atmega32
+CC := avr-gcc
+OBJCOPY := avr-objcopy
+SIZE := avr-size
 RM := rm -rf
+TARGET := Speaking_System_For_Mute_People
 
--include sources.mk
--include MCAL/UART/subdir.mk
--include MCAL/SERVICES/SHOW/subdir.mk
--include MCAL/SERVICES/GLOVE_HANDLER/subdir.mk
--include MCAL/SERVICES/GET_WORD_SOUND/subdir.mk
--include MCAL/SERVICES/CALIBRATION/subdir.mk
--include MCAL/DIO/subdir.mk
--include MCAL/ADC/subdir.mk
--include HAL/TILT_SENSOR/subdir.mk
--include HAL/M16P_HANDLER/subdir.mk
--include HAL/LCD/subdir.mk
--include HAL/FLEX_SENSOR/subdir.mk
--include APP/subdir.mk
--include objects.mk
+CFLAGS := -mmcu=$(MCU) -DF_CPU=8000000UL -Os -std=gnu99 -Wall -Wextra
+INCLUDES := \
+-I../LIB \
+-I../APP \
+-I../HAL/FLEX_SENSOR \
+-I../HAL/TILT_SENSOR \
+-I../HAL/LCD \
+-I../HAL/M16P_HANDLER \
+-I../MCAL/ADC \
+-I../MCAL/DIO \
+-I../MCAL/UART \
+-I../MCAL/SERVICES/CALIBRATION \
+-I../MCAL/SERVICES/GET_WORD_SOUND \
+-I../MCAL/SERVICES/GLOVE_HANDLER \
+-I../MCAL/SERVICES/SHOW
 
-ifneq ($(MAKECMDGOALS),clean)
-ifneq ($(strip $(ASM_DEPS)),)
--include $(ASM_DEPS)
-endif
-ifneq ($(strip $(S_DEPS)),)
--include $(S_DEPS)
-endif
-ifneq ($(strip $(S_UPPER_DEPS)),)
--include $(S_UPPER_DEPS)
-endif
-ifneq ($(strip $(C_DEPS)),)
--include $(C_DEPS)
-endif
-endif
+CFLAGS += $(INCLUDES)
 
--include ../makefile.defs
+SOURCES := \
+../APP/main.c \
+../HAL/FLEX_SENSOR/FLEX_SENSOR_Program.c \
+../HAL/TILT_SENSOR/tilt_sensor_prog.c \
+../HAL/LCD/LCD_Program.c \
+../HAL/M16P_HANDLER/M16P_HANDLER_Program.c \
+../MCAL/ADC/ADC_Program.c \
+../MCAL/DIO/DIO_Program.c \
+../MCAL/UART/UART_Program.c \
+../MCAL/SERVICES/CALIBRATION/CALIBRATION_Program.c \
+../MCAL/SERVICES/GET_WORD_SOUND/GET_WORD_SOUND_Program.c \
+../MCAL/SERVICES/GLOVE_HANDLER/GLOVE_HANDLER_Program.c \
+../MCAL/SERVICES/SHOW/SHOW_Program.c
 
-LSS += \
-Speaking_System_For_Mute_People.lss \
+OBJECTS := $(SOURCES:.c=.o)
 
-SIZEDUMMY += \
-sizedummy \
+all: $(TARGET).hex $(TARGET).eep $(TARGET).lss
 
-all: Speaking_System_For_Mute_People.elf secondary-outputs
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-Speaking_System_For_Mute_People.elf: $(OBJS) $(USER_OBJS)
-	@echo 'Building target: $@'
-	@echo 'Invoking: AVR C Linker'
-	avr-gcc -Wl,-Map,Speaking_System_For_Mute_People.map -mmcu=atmega32 -o "Speaking_System_For_Mute_People.elf" $(OBJS) $(USER_OBJS) $(LIBS)
-	@echo 'Finished building target: $@'
-	@echo ' '
+$(TARGET).elf: $(OBJECTS)
+	$(CC) -mmcu=$(MCU) -o $@ $^ -lm
 
-Speaking_System_For_Mute_People.lss: Speaking_System_For_Mute_People.elf
-	@echo 'Invoking: AVR Create Extended Listing'
-	-avr-objdump -h -S Speaking_System_For_Mute_People.elf >"Speaking_System_For_Mute_People.lss"
-	@echo 'Finished building: $@'
-	@echo ' '
+$(TARGET).hex: $(TARGET).elf
+	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
-sizedummy: Speaking_System_For_Mute_People.elf
-	@echo 'Invoking: Print Size'
-	-avr-size --format=avr --mcu=atmega32 Speaking_System_For_Mute_People.elf
-	@echo 'Finished building: $@'
-	@echo ' '
+$(TARGET).eep: $(TARGET).elf
+	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom="alloc,load" --no-change-warnings --change-section-lma .eeprom=0 $< $@
+
+$(TARGET).lss: $(TARGET).elf
+	avr-objdump -h -S $< > $@
+
+size: $(TARGET).elf
+	$(SIZE) --format=avr --mcu=$(MCU) $<
 
 clean:
-	-$(RM) $(ELFS)$(OBJS)$(ASM_DEPS)$(S_DEPS)$(SIZEDUMMY)$(S_UPPER_DEPS)$(LSS)$(C_DEPS) Speaking_System_For_Mute_People.elf
-	-@echo ' '
+	$(RM) $(OBJECTS) $(TARGET).elf $(TARGET).hex $(TARGET).eep $(TARGET).lss
 
-secondary-outputs: $(LSS) $(SIZEDUMMY)
-
-.PHONY: all clean dependents
-.SECONDARY:
-
--include ../makefile.targets
+.PHONY: all clean size
