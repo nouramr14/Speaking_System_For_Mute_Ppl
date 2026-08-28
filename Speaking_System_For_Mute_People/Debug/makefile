@@ -1,17 +1,18 @@
 ################################################################################
-# Automatically-generated file. Do not edit!
+# AVR build file
 ################################################################################
 
 -include ../makefile.init
 
 RM := rm -rf
 
-# All of the sources participating in the build are defined here
 -include sources.mk
 -include MCAL/UART/subdir.mk
 -include MCAL/TIMER/subdir.mk
+-include MCAL/SERVICES/SHOW/subdir.mk
 -include MCAL/SERVICES/GLOVE_HANDLER/subdir.mk
 -include MCAL/SERVICES/GET_WORD_SOUND/subdir.mk
+-include MCAL/SERVICES/CALIBRATION/subdir.mk
 -include MCAL/GIE/subdir.mk
 -include MCAL/DIO/subdir.mk
 -include MCAL/ADC/subdir.mk
@@ -42,18 +43,14 @@ endif
 
 -include ../makefile.defs
 
-# Add inputs and outputs from these tool invocations to the build variables 
 LSS += \
 Speaking_System_For_Mute_People.lss \
 
 SIZEDUMMY += \
 sizedummy \
 
-
-# All Target
 all: Speaking_System_For_Mute_People.elf secondary-outputs
 
-# Tool invocations
 Speaking_System_For_Mute_People.elf: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: AVR C Linker'
@@ -63,7 +60,7 @@ Speaking_System_For_Mute_People.elf: $(OBJS) $(USER_OBJS)
 
 Speaking_System_For_Mute_People.lss: Speaking_System_For_Mute_People.elf
 	@echo 'Invoking: AVR Create Extended Listing'
-	-avr-objdump -h -S Speaking_System_For_Mute_People.elf  >"Speaking_System_For_Mute_People.lss"
+	-avr-objdump -h -S Speaking_System_For_Mute_People.elf >"Speaking_System_For_Mute_People.lss"
 	@echo 'Finished building: $@'
 	@echo ' '
 
@@ -73,7 +70,6 @@ sizedummy: Speaking_System_For_Mute_People.elf
 	@echo 'Finished building: $@'
 	@echo ' '
 
-# Other Targets
 clean:
 	-$(RM) $(ELFS)$(OBJS)$(ASM_DEPS)$(S_DEPS)$(SIZEDUMMY)$(S_UPPER_DEPS)$(LSS)$(C_DEPS) Speaking_System_For_Mute_People.elf
 	-@echo ' '
