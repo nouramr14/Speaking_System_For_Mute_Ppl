@@ -1,136 +1,144 @@
-/*
- * LCD_Program.c
- *
- *  Created on: Aug 26, 2026
- *      Author: DELL
- */
-#include"../../LIB/STD_Types.h"
+#include "../../LIB/STD_Types.h"
 #include "../../MCAL/DIO/DIO_Interface.h"
-#include"util/delay.h"
-#include"LCD_Config.h"
+#include "LCD_Config.h"
+#include "LCD_Interface.h"
+#include <util/delay.h>
 
-uint8_t next_char_position = 0;
+static u8 next_char_position = 0u;
 
-void LCD_vidWriteData(uint8_t data)
+void LCD_vidWriteData(u8 data)
 {
-	DIO_u8SetPinValue(LCD_RS_PORT,LCD_RS_PIN,HIGH);
-	DIO_u8SetPinValue(LCD_RW_PORT,LCD_RW_PIN,LOW);
-	DIO_u8SetPortValue(LCD_Data_PORT,data);
-	DIO_u8SetPinValue(LCD_EN_PORT,LCD_EN_PIN,HIGH);
-	_delay_ms(2);
-	DIO_u8SetPinValue(LCD_EN_PORT,LCD_EN_PIN,LOW);
+    DIO_u8SetPinValue(LCD_RS_PORT, LCD_RS_PIN, HIGH);
+    DIO_u8SetPinValue(LCD_RW_PORT, LCD_RW_PIN, LOW);
+    DIO_u8SetPortValue(LCD_Data_PORT, data);
+    DIO_u8SetPinValue(LCD_EN_PORT, LCD_EN_PIN, HIGH);
+    _delay_us(100);
+    DIO_u8SetPinValue(LCD_EN_PORT, LCD_EN_PIN, LOW);
+    _delay_us(100);
 }
 
-void LCD_vidWriteCmd(uint8_t command)
+void LCD_vidWriteCmd(u8 command)
 {
-	DIO_u8SetPinValue(LCD_RS_PORT,LCD_RS_PIN,LOW);
-	DIO_u8SetPinValue(LCD_RW_PORT,LCD_RW_PIN,LOW);
-	DIO_u8SetPortValue(LCD_Data_PORT,command);
-	DIO_u8SetPinValue(LCD_EN_PORT,LCD_EN_PIN,HIGH);
-	_delay_ms(2);
-	DIO_u8SetPinValue(LCD_EN_PORT,LCD_EN_PIN,LOW);
+    DIO_u8SetPinValue(LCD_RS_PORT, LCD_RS_PIN, LOW);
+    DIO_u8SetPinValue(LCD_RW_PORT, LCD_RW_PIN, LOW);
+    DIO_u8SetPortValue(LCD_Data_PORT, command);
+    DIO_u8SetPinValue(LCD_EN_PORT, LCD_EN_PIN, HIGH);
+    _delay_us(100);
+    DIO_u8SetPinValue(LCD_EN_PORT, LCD_EN_PIN, LOW);
+    _delay_us(100);
 }
 
 void LCD_vidInit(void)
 {
-	DIO_u8SetPinMode(LCD_RS_PORT,LCD_RS_PIN,OUTPUT);
-	DIO_u8SetPinMode(LCD_RW_PORT,LCD_RW_PIN,OUTPUT);
-	DIO_u8SetPinMode(LCD_EN_PORT,LCD_EN_PIN,OUTPUT);
-	DIO_u8SetPortMode(LCD_Data_PORT,255);
-	_delay_ms(40);
-	LCD_vidWriteCmd(0b00111000);
-	_delay_ms(2);
-	LCD_vidWriteCmd(0b00001100);
-	_delay_ms(2);
-	LCD_vidWriteCmd(0b00000001);
-	_delay_ms(2);
-	LCD_vidWriteCmd(0b00000110);
+    DIO_u8SetPinMode(LCD_RS_PORT, LCD_RS_PIN, OUTPUT);
+    DIO_u8SetPinMode(LCD_RW_PORT, LCD_RW_PIN, OUTPUT);
+    DIO_u8SetPinMode(LCD_EN_PORT, LCD_EN_PIN, OUTPUT);
+    DIO_u8SetPortMode(LCD_Data_PORT, 0xFFu);
+
+    _delay_ms(40);
+    LCD_vidWriteCmd(0x38u); /* 8-bit, 2-line, 5x8 font */
+    _delay_ms(5);
+    LCD_vidWriteCmd(0x0Cu); /* Display ON, cursor OFF */
+    _delay_ms(1);
+    LCD_vidWriteCmd(0x01u); /* Clear */
+    _delay_ms(2);
+    LCD_vidWriteCmd(0x06u); /* Increment cursor */
+    next_char_position = 0u;
 }
 
-void LCD_vidDisplayString(uint8_t * string)
+void LCD_vidDisplayString(u8* string)
 {
-	for(uint8_t i=0; string[i]!='\0'; i++)
-	{
-		if(next_char_position==16)LCD_vidWriteCmd(0b11000000);
-		LCD_vidWriteData(string[i]);
-		next_char_position++;
-	}
-}
-void LCD_vidNewLine()
-{
-	LCD_vidWriteCmd(0b11000000);
-}
-void LCD_vidDisplayStringLeftShift(uint8_t* string)
-{
-	uint8_t i,y=0;
-	for(i=0;string[i]!='\0';i++)
-		{
-			LCD_vidWriteData(string[i]);
-		}
-	while(1)
-	{
-		if((y%i)-16==0)LCD_vidWriteCmd(0b10000000);
-		LCD_vidWriteCmd(0b00011000);
-		_delay_ms(500);
-		y++;
-	}
+    u8 i;
+    if (string == NULL) return;
+
+    for (i = 0u; string[i] != '\0'; i++)
+    {
+        if (next_char_position == 16u)
+        {
+            LCD_vidWriteCmd(0xC0u);
+            next_char_position = 16u;
+        }
+        LCD_vidWriteData(string[i]);
+        if (next_char_position < 32u) next_char_position++;
+    }
 }
 
-void LCD_vidDisplayStringRightShift(uint8_t* string)
+void LCD_vidNewLine(void)
 {
-	uint8_t i,y=0;
-	for(i=0;string[i]!='\0';i++)
-		{
-			LCD_vidWriteData(string[i]);
-		}
-	while(1)
-	{
-		if((y%i)-16==0)LCD_vidWriteCmd(0b10000000);
-		LCD_vidWriteCmd(0b00011100);
-		_delay_ms(500);
-		y++;
-	}
+    LCD_vidWriteCmd(0xC0u);
+    next_char_position = 16u;
 }
 
-void LCD_vidClearDisplay()
+void LCD_vidDisplayStringLeftShift(u8* string)
 {
-	LCD_vidWriteCmd(0b00000001);
-	next_char_position = 0;
+    if (string == NULL) return;
+    LCD_vidDisplayString(string);
+    while (1)
+    {
+        LCD_vidWriteCmd(0x18u);
+        _delay_ms(500);
+    }
 }
 
-void LCD_vidGoTo(uint8_t x,uint8_t y)
+void LCD_vidDisplayStringRightShift(u8* string)
 {
-	if(x==1&&y<=39)LCD_vidWriteCmd((0b10000000+y));
-	else if(x==2&&(y+64)<103) LCD_vidWriteCmd((0b11000000+y));
+    if (string == NULL) return;
+    LCD_vidDisplayString(string);
+    while (1)
+    {
+        LCD_vidWriteCmd(0x1Cu);
+        _delay_ms(500);
+    }
 }
 
-void LCD_vidSetCursor(uint8_t x,uint8_t y)
+void LCD_vidClearDisplay(void)
 {
-	LCD_vidGoTo(x,y);
-	LCD_vidWriteCmd(0b00001111);
+    LCD_vidWriteCmd(0x01u);
+    _delay_ms(2);
+    next_char_position = 0u;
+}
+
+void LCD_vidGoTo(u8 x, u8 y)
+{
+    if (x == 1u && y < 16u)
+    {
+        LCD_vidWriteCmd((u8)(0x80u + y));
+        next_char_position = y;
+    }
+    else if (x == 2u && y < 16u)
+    {
+        LCD_vidWriteCmd((u8)(0xC0u + y));
+        next_char_position = (u8)(16u + y);
+    }
+}
+
+void LCD_vidSetCursor(u8 x, u8 y)
+{
+    LCD_vidGoTo(x, y);
+    LCD_vidWriteCmd(0x0Fu);
 }
 
 void LCD_vidWriteInteger(u16 number)
 {
-	u16 num_mask=number,p=1;
-	u8 i=0;
-	s8 nxtl;
-	if(num_mask==0)LCD_vidWriteData('0');
-	for(;num_mask!=0;i++)
-	{
-		num_mask/=10;
-		p*=10;
-	}
+    u16 divisor = 1u;
+    u16 value;
 
-	p/=10;
-	nxtl = i - 16;
-	if(nxtl < 0) nxtl =0;
-	for(;i>0;i--)
-	{
-		if(i==nxtl)LCD_vidWriteCmd(0b11000000);
-		num_mask= (uint8_t)(number/p);
-		LCD_vidWriteData((uint8_t)'0'+num_mask);
-		number -= num_mask*p;
-		p/=10;
-	}
+    if (number == 0u)
+    {
+        LCD_vidWriteData('0');
+        if (next_char_position < 32u) next_char_position++;
+        return;
+    }
+
+    while ((number / divisor) >= 10u && divisor <= 1000u) divisor *= 10u;
+
+    while (divisor > 0u)
+    {
+        value = number / divisor;
+        LCD_vidWriteData((u8)('0' + value));
+        if (next_char_position < 32u) next_char_position++;
+        number = (u16)(number % divisor);
+        if (divisor == 1u) break;
+        divisor /= 10u;
+    }
 }
